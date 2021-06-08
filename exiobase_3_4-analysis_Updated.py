@@ -8,7 +8,7 @@ Tasks:
     5. Identify top-5 final demand expenditure on products that contribute to consumption-based emissions of a specific country
     6. Identify top-5 countries where the specific country displaced its emissions to
 """
-#%%
+
 import numpy as np
 import time
 import pickle as pkl
@@ -195,7 +195,14 @@ else :
     for i in range(0,5) :    
         print("Top", i+1, label_r[rank[i]],"(country index =", rank[i], ");")
  
-#%% Create F for comparison
+#%% ========================================================================================================
+#                                     IGA Project begins here
+#   ========================================================================================================
+
+# Scenario 1: Baseline (2019) Scenario
+#   ========================================================================================================
+
+# Create F for comparison - F value is large and needs to be reduced for comparison purposes
 f = F/x
 f = np.nan_to_num(f, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
 F_2019 = f @ L @ Y
@@ -204,61 +211,54 @@ F_2019 = f @ L @ Y
 F_2019_df = pd.DataFrame(F_2019)
 F_2019_df.to_csv('F_2019_df.csv') 
 
-#%% Scenario where the impact of COVID 19 is calculated on the hospitality sector in the Netherlands
-# hospitality sector for Netherlands is line 4155
+print("2019 Direct effects run complete, Direct effects matrix (F) for 2019 in variable explorer")
 
-# Implementing reduction in Y
+# Scenario 2: 2020 no package Scenario - where the impact of COVID 19 is calculated on the hotel sector in the Netherlands
+#   ========================================================================================================
+
+# Implementing reduction in in the Final Demand (Y and y)
 Y_covid = mrio['Y_covid']
-Y_reduction = Y_covid[4155,:] * 0.4 # 60% reduction of the final demand of the hotel sector
+Y_reduction = Y_covid[4155,:] * 0.4     # 60% reduction of the final demand of the hotel sector
+                                        # hospitality sector for Netherlands is line 4155
 Y_covid[4155,:] = Y_reduction
 
-y_covid = Y_covid.sum(1)
-
-# calculate x_covid (Total Output)
-Z = A * x
+# Calculating the Total Output that reflects the reduction in final demand due to covid (x)
+Z = A * x       # Calculate Z as intermediate step
 x_covid = Y_covid.sum(1) + Z.sum(1)
 
-# Value Added Covid
-V_covid = x_covid - Z.sum(0)
-
-# Calculate Direct Effects (F_covid) based on original F
-#calculate multiplier
-f_covid = F/x_covid
+# Calculate Direct Effects (F_covid) based on original F (F_2019) in order to analyze wages and emissions
+f_covid = F/x_covid     # calculate multiplier
 f_covid = np.nan_to_num(f_covid, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
 
-# F calculation
-F_covid = f_covid @ L @ Y_covid
+F_covid = f_covid @ L @ Y_covid     # F calculation
 F_covid = np.nan_to_num(F_covid, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
-
-# F_va_covid = F_covid[0:9]  #VA section of F
-# F_employment_covid = F_covid[9:23]
 
 #convert to csv
 F_covid_df = pd.DataFrame(F_covid)
 F_covid_df.to_csv('F_covid_df.csv') 
 
-#%% Scenario where the impact of the NOW package is calculated on the hospitality sector in the Netherlands
+print("Covid Scenario run complete, variables calculated (Y,x,f,F) in variable explorer")
+
+# Scenario 3: 2020 NOW1 Package Scenario - where the impact of the NOW1 stimulus package is calculated on the hotel sector in the Netherlands
+#   ========================================================================================================
 
 # Implement Package NOW1 - this calculates the % govt payed by taking into account wages
-NOW_1 = ((F[2:5, 4155].sum())/4)* 0.45  # take wages for the first quarter of 2020(covid) and calculate the NOW package (45% of wages)
+NOW_1 = ((F[2:5, 4155].sum())/4)* 0.45  # take wages for the first quarter of 2020 (covid) and calculate the NOW package (45% of wages)
 
-# Calculating final demand including the NOW1 package
+# Calculating final demand including the NOW1 package (Y)
 Y_NOW1 = mrio['Y_NOW1']
-Y_red= Y_NOW1[4155,:] * 0.4 # 60% reduction of the final demand of the hotel sector
-Y_NOW1[4155,:] = Y_red
+Y_reduction1= Y_NOW1[4155,:] * 0.4     # 60% reduction of the final demand of the hotel sector
+Y_NOW1[4155,:] = Y_reduction1
 
-Y_NOW1[4155,142] = Y_NOW1[4155,142] + NOW_1  # Govt exp + NOW1 on hospitality sector
+Y_NOW1[4155,142] = Y_NOW1[4155,142] + NOW_1  # Govt expenditure on the hotel sector + NOW1 stimulus packafe
 
-# Calculating Total expenditure and Value added with implementation of NOW1 package
+# # Calculating the Total Output that reflects the implementation of NOW1 package (x)
 x_NOW1 = Y_NOW1.sum(1) + Z.sum(1)
-V_NOW1= x_NOW1 - Z.sum(0)
 
-# Calculate Direct Effects (F_NOW1) based on original F
-#calculate multiplier
-f_NOW1 = F/x_NOW1
+# # Calculate Direct Effects (F_NOW1) based on original F (F_2019) in order to analyze wages and emissions
+f_NOW1 = F/x_NOW1   #calculate multiplier
 f_NOW1 = np.nan_to_num(f_NOW1, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
 
-# F calculation
 F_NOW1 = f_NOW1  @ L @ Y_NOW1
 F_NOW1 = np.nan_to_num(F_NOW1, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
 
@@ -266,55 +266,99 @@ F_NOW1 = np.nan_to_num(F_NOW1, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #na
 F_NOW1_df = pd.DataFrame(F_NOW1)
 F_NOW1_df.to_csv('F_NOW1_df.csv') 
 
-#%% ANALYSIS
+print("NOW1 Package Scenario run complete, variables calculated (NOW1,Y,x,f,F) in variable explorer")
 
-# Calculating V for NL ONLY (M Euros)
+#%% ========================================================================================================
+#                                     ANALYSIS
+#   ========================================================================================================
+print("Scenario Overview",'\n',
+      "Scenario 1: Baseline (2019) Scenario",'\n',
+      "Scenario 2: 2020 no package Scenario - where the impact of COVID 19 is calculated on the hotel sector in the Netherlands",'\n',
+      "Scenario 3: 2020 NOW1 Package Scenario - where the impact of the NOW1 stimulus package is calculated on the hotel sector in the Netherlands",'\n','\n','\n')
+
+# Calculating Value Added for each scenario in the Netherlands (M Euros)
 V_2019_NL = F_2019[0:9,140:147]
 V_covid_NL = F_covid[0:9,140:147]
 V_NOW1_NL = F_NOW1[0:9,140:147]
-print("We are analyzing the value added sums to ensure that they correspond to the intentions of this research question, where 2019 VA is: ", V_2019_NL.sum()
-      ,", where COVID19 VA is: ", V_2019_NL.sum(), ", and where ")
+
+print("Analyzing the value added sums to ensure that they correspond with our hypothesis, where.. ",'\n',
+      "Scenario 1: ", V_2019_NL.sum(),"M Euros",'\n',
+      "Scenario 2: ", V_2019_NL.sum(),"M Euros",'\n',
+      "Scenario 3: ", V_NOW1_NL.sum(),"M Euros",'\n',
+      "Here we see that the results confirm our hypothesis, where we assume that the Scenario 1 has the highest values, followed by Scenario 3, and lastly Scenario 2",'\n','\n','\n')
 
 # Comparing Wages (M Euros)
 wages_2019 = V_2019_NL[2:5,:].sum(1)
 wages_covid = V_covid_NL[2:5,:].sum(1)
 wages_NOW1 = V_NOW1_NL[2:5,:].sum(1)
 
-# Employement (thousands of people)
+print("Analyzing the wages to explore the..",'\n',
+      "Reduction of wages in the Netherlands from 2019 to 2020 (with implementation of NOW1): ", wages_2019.sum() - wages_NOW1.sum(),"M Euros",'\n',
+      "Wages earned in the Netherlands due to implementation of the NOW1 package: ", wages_NOW1.sum() - wages_covid.sum(),"M Euros",'\n',
+      "Wages that would've been lost in the Netherlands if NOW1 package was not implemented': ", wages_2019.sum() - wages_covid.sum(),"M Euros",'\n','\n','\n')
+
+# Employment in all of NL (thousands of people)
 employment_2019 = F_2019[9:15,140:147].sum(1)
 employment_covid = F_covid[9:15,140:147].sum(1)
 employment_NOW1 = F_NOW1[9:15,140:147].sum(1)
 
-# Employment by skill level
+# Employment by skill level (thousands of people)
 skill_level = np.empty(shape=(3,3),dtype='object')
+
+# Scenario 1
 high_skilled_2019 = employment_2019[0:2].sum()
+skill_level[0,0] = high_skilled_2019
 medium_skilled_2019 = employment_2019[2:4].sum()
+skill_level[0,1] = medium_skilled_2019
 low_skilled_2019 = employment_2019[4:6].sum()
+skill_level[0,2] = low_skilled_2019
 
+# Scenario 2
 high_skilled_covid = employment_covid[0:2].sum()
+skill_level[1,0] = high_skilled_covid
 medium_skilled_covid = employment_covid[2:4].sum()
+skill_level[1,1] = medium_skilled_covid
 low_skilled_covid = employment_covid[4:6].sum()
+skill_level[1,2] = low_skilled_covid
 
+# Scenario 3
 high_skilled_NOW1  = employment_NOW1[0:2].sum()
+skill_level[2,0] = high_skilled_NOW1
 medium_skilled_NOW1  = employment_NOW1[2:4].sum()
+skill_level[2,1] = medium_skilled_NOW1
 low_skilled_NOW1  = employment_NOW1[4:6].sum()
+skill_level[2,2] = low_skilled_NOW1
 
-skill_level = [[high_skilled_2019, medium_skilled_2019, low_skilled_2019],
-               [high_skilled_covid, medium_skilled_covid, low_skilled_covid],
-               [high_skilled_NOW1, medium_skilled_NOW1,low_skilled_NOW1]]
 
-#%% Indirect effects EMISSIONS from covid final exp reduction and from the implementation of the NOW1 package 
-# 23 - 30 
+print("Analyzing employment in the Netherlands from 2019 to 2020 (with implementation of NOW1):",'\n',
+      "Job losses (at all skill levels): ", employment_2019.sum() - employment_NOW1.sum()," thousands of people",'\n',
+      "High Skilled Job Losses: ", high_skilled_2019.sum() - high_skilled_NOW1.sum()," thousands of people",'\n',
+      "Medium Skilled Job Losses : ", medium_skilled_2019.sum() - medium_skilled_NOW1.sum()," thousands of people",'\n',
+      "Low Skilled Job Losses : ", low_skilled_2019.sum() - low_skilled_NOW1.sum()," thousands of people",'\n', '\n',
+      
+      "Analyzing employment in the Netherlands in 2020 with implementation of NOW1 and without:",'\n',
+      "Jobs saved with implemenation of NOW1 (at all skill levels) : ", employment_NOW1.sum() - employment_covid.sum()," thousands of people",'\n',
+      "High Skilled Jobs Saved : ", high_skilled_NOW1.sum() - high_skilled_covid.sum()," thousands of people",'\n',
+      "Medium Skilled Jobs Saved : ", medium_skilled_NOW1.sum() - medium_skilled_2019.sum()," thousands of people",'\n',
+      "Low Skilled Jobs Saved : ", low_skilled_NOW1.sum() - low_skilled_covid.sum()," thousands of people",'\n', '\n',
+      
+      "Analyzing employment in the Netherlands in 2020 with implementation of NOW1 and without:",'\n',
+      "Jobs that would've been lost without implemenation of NOW1 (at all skill levels) : ", employment_2019.sum() - employment_covid.sum()," thousands of people",'\n',
+      "High Skilled Job Losses: ", high_skilled_2019.sum() - high_skilled_covid.sum()," thousands of people",'\n',
+      "Medium Skilled Job Losses : ", medium_skilled_2019.sum() - medium_skilled_covid.sum()," thousands of people",'\n',
+      "Low Skilled Job Losses : ", low_skilled_2019.sum() - low_skilled_covid.sum()," thousands of people",'\n','\n','\n') 
+      
+# Indirect effects on emissions from covid final exp reduction and from the implementation of the NOW1 package 
+    # Air Emissions in rows 23 - 30 
 emissions_NL_2019 = F_2019[23:30,140:147].sum(1)
 emissions_NL_covid = F_covid[23:30,140:147].sum(1)
 emissions_NL_NOW1 = F_NOW1[23:30,140:147].sum(1)
 
-
-# %%Reprecutions in other sectors
-
-# Indirect effects of NOW/covid on air travel ? from the final expenditure POV
-
-
+print("Analyzing CO2 emissions in the Netherlands:",'\n',
+      "We decided to only analyze Co2 air emissions because those emissions were significantly higher than the other air emissions", '\n',
+      "Co2 Air Emissions that were not realized due to COVID : ", emissions_NL_2019[0] - emissions_NL_NOW1[0], " kg", '\n',
+      "Co2 emissions attributed to the implementation of the NOW1 package : ", emissions_NL_NOW1[0] - emissions_NL_covid[0]," kg", '\n',
+      "Co2 Air Emissions that wouldn't have been made if NOW1 package wasn't implemented : ", emissions_NL_2019[0] - emissions_NL_covid[0], " kg")
 
 
 
