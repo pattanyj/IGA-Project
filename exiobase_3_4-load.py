@@ -140,3 +140,6 @@ pkl_out.close()
 tend = time.time()
 print('Done writing in %5.2f s\n'% (tend - tstart))
 
+#%%
+F_pd.to_csv('F_df.csv') 
+Y_pd.to_csv('Y_df.csv') 

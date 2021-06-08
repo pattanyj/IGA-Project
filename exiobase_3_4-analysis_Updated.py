@@ -195,12 +195,14 @@ else :
     for i in range(0,5) :    
         print("Top", i+1, label_r[rank[i]],"(country index =", rank[i], ");")
  
-#%%
+#%% Create F for comparison
 f = F/x
-#%%
 f = np.nan_to_num(f, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
-#%%
-og_F4= np.diag(f.sum(0)) @ L @ np.diag(y)
+F_2019 = f @ L @ Y
+
+#convert to csv
+F_2019_df = pd.DataFrame(F_2019)
+F_2019_df.to_csv('F_2019_df.csv') 
 
 #%% Scenario where the impact of COVID 19 is calculated on the hospitality sector in the Netherlands
 # hospitality sector for Netherlands is line 4155
@@ -208,7 +210,7 @@ og_F4= np.diag(f.sum(0)) @ L @ np.diag(y)
 # Implementing reduction in Y
 Y_covid = mrio['Y_covid']
 Y_reduction = Y_covid[4155,:] * 0.4 # 60% reduction of the final demand of the hotel sector
-Y_covid[4155] = Y_reduction
+Y_covid[4155,:] = Y_reduction
 
 y_covid = Y_covid.sum(1)
 
@@ -225,21 +227,26 @@ f_covid = F/x_covid
 f_covid = np.nan_to_num(f_covid, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
 
 # F calculation
-F_covid = f_covid @ L @ np.diag(y_covid)
+F_covid = f_covid @ L @ Y_covid
 F_covid = np.nan_to_num(F_covid, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
 
-F_va_covid = F_covid[0:9]  #VA section of F
-F_employment_covid = F_covid[9:23]
+# F_va_covid = F_covid[0:9]  #VA section of F
+# F_employment_covid = F_covid[9:23]
 
-np.savetxt("F_covid.csv", F_covid, delimiter=",")
+#convert to csv
+F_covid_df = pd.DataFrame(F_covid)
+F_covid_df.to_csv('F_covid_df.csv') 
 
 #%% Scenario where the impact of the NOW package is calculated on the hospitality sector in the Netherlands
 
 # Implement Package NOW1 - this calculates the % govt payed by taking into account wages
-NOW_1 = F[2:4, 4155].sum() * 0.45
+NOW_1 = ((F[2:5, 4155].sum())/4)* 0.45  # take wages for the first quarter of 2020(covid) and calculate the NOW package (45% of wages)
 
 # Calculating final demand including the NOW1 package
 Y_NOW1 = mrio['Y_NOW1']
+Y_red= Y_NOW1[4155,:] * 0.4 # 60% reduction of the final demand of the hotel sector
+Y_NOW1[4155,:] = Y_red
+
 Y_NOW1[4155,142] = Y_NOW1[4155,142] + NOW_1  # Govt exp + NOW1 on hospitality sector
 
 # Calculating Total expenditure and Value added with implementation of NOW1 package
@@ -254,5 +261,60 @@ f_NOW1 = np.nan_to_num(f_NOW1, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #na
 # F calculation
 F_NOW1 = f_NOW1  @ L @ Y_NOW1
 F_NOW1 = np.nan_to_num(F_NOW1, copy=False, nan=0.0, posinf=0.0, neginf=0.0)  #nan to 0
-F_va_NOW1 = F_NOW1[0:22]  #VA section of F
+
+#convert to csv
+F_NOW1_df = pd.DataFrame(F_NOW1)
+F_NOW1_df.to_csv('F_NOW1_df.csv') 
+
+#%% ANALYSIS
+
+# Calculating V for NL ONLY (M Euros)
+V_2019_NL = F_2019[0:9,140:147]
+V_covid_NL = F_covid[0:9,140:147]
+V_NOW1_NL = F_NOW1[0:9,140:147]
+print("We are analyzing the value added sums to ensure that they correspond to the intentions of this research question, where 2019 VA is: ", V_2019_NL.sum()
+      ,", where COVID19 VA is: ", V_2019_NL.sum(), ", and where ")
+
+# Comparing Wages (M Euros)
+wages_2019 = V_2019_NL[2:5,:].sum(1)
+wages_covid = V_covid_NL[2:5,:].sum(1)
+wages_NOW1 = V_NOW1_NL[2:5,:].sum(1)
+
+# Employement (thousands of people)
+employment_2019 = F_2019[9:15,140:147].sum(1)
+employment_covid = F_covid[9:15,140:147].sum(1)
+employment_NOW1 = F_NOW1[9:15,140:147].sum(1)
+
+# Employment by skill level
+skill_level = np.empty(shape=(3,3),dtype='object')
+high_skilled_2019 = employment_2019[0:2].sum()
+medium_skilled_2019 = employment_2019[2:4].sum()
+low_skilled_2019 = employment_2019[4:6].sum()
+
+high_skilled_covid = employment_covid[0:2].sum()
+medium_skilled_covid = employment_covid[2:4].sum()
+low_skilled_covid = employment_covid[4:6].sum()
+
+high_skilled_NOW1  = employment_NOW1[0:2].sum()
+medium_skilled_NOW1  = employment_NOW1[2:4].sum()
+low_skilled_NOW1  = employment_NOW1[4:6].sum()
+
+skill_level = [[high_skilled_2019, medium_skilled_2019, low_skilled_2019],
+               [high_skilled_covid, medium_skilled_covid, low_skilled_covid],
+               [high_skilled_NOW1, medium_skilled_NOW1,low_skilled_NOW1]]
+
+#%% Indirect effects EMISSIONS from covid final exp reduction and from the implementation of the NOW1 package 
+# 23 - 30 
+emissions_NL_2019 = F_2019[23:30,140:147].sum(1)
+emissions_NL_covid = F_covid[23:30,140:147].sum(1)
+emissions_NL_NOW1 = F_NOW1[23:30,140:147].sum(1)
+
+
+# %%Reprecutions in other sectors
+
+# Indirect effects of NOW/covid on air travel ? from the final expenditure POV
+
+
+
+
 
